@@ -1,56 +1,57 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
-using System;
 
-
-public class Observer : Singleton<Observer>
+namespace DATA.Scripts.Core
 {
-    private Dictionary<string, List<Action>> _listeners = new Dictionary<string, List<Action>>();
-
-    public void RegisterObserver(string key, Action action)
+    public class Observer : Singleton<Observer>
     {
-        List<Action> actions;
-        if (_listeners.ContainsKey(key))
-        {
-            actions = _listeners[key];
-        }
-        else
-        {
-            actions = new List<Action>();
-            _listeners.Add(key, actions);
-        }
+        private readonly Dictionary<string, List<Action>> _listeners = new Dictionary<string, List<Action>>();
 
-        actions.Add(action);
-    }
-
-    public void NotifyObservers(string key)
-    {
-        if (_listeners.ContainsKey(key))
+        public void RegisterObserver(string key, Action action)
         {
-            foreach (Action a in _listeners[key])
+            List<Action> actions;
+            if (_listeners.TryGetValue(key, out var listener))
             {
-                try
+                actions = listener;
+            }
+            else
+            {
+                actions = new List<Action>();
+                _listeners.Add(key, actions);
+            }
+
+            actions.Add(action);
+        }
+
+        public void NotifyObservers(string key)
+        {
+            if (_listeners.TryGetValue(key, value: out var listener))
+            {
+                foreach (Action a in listener)
                 {
-                    a?.Invoke();
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError(e);
+                    try
+                    {
+                        a?.Invoke();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError(e);
+                    }
                 }
             }
+            else
+            {
+                Debug.LogErrorFormat("listener {0} not exist", key);
+            }
         }
-        else
-        {
-            Debug.LogErrorFormat("listener {0} not exist", key);
-        }
-    }
 
-    public void RemoveObserver(string key, Action action)
-    {
-        if (_listeners.ContainsKey(key))
+        public void RemoveObserver(string key, Action action)
         {
-            _listeners[key].Remove(action);
+            if (_listeners.TryGetValue(key, out var listener))
+            {
+                listener.Remove(action);
+            }
         }
     }
 }
