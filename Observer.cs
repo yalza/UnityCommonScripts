@@ -7,7 +7,7 @@ namespace DATA.Scripts.Core
     public class Observer : Singleton<Observer>
     {
         private readonly Dictionary<string, List<Action>> _listeners = new Dictionary<string, List<Action>>();
-
+        private readonly Dictionary<string, List<Action<List<object>>>> _listenersWithParam = new Dictionary<string, List<Action<List<object>>>>();
         public void RegisterObserver(string key, Action action)
         {
             List<Action> actions;
@@ -22,6 +22,44 @@ namespace DATA.Scripts.Core
             }
 
             actions.Add(action);
+        }
+      
+        public void RegisterObserver(string key, Action<List<object>> action)
+        {
+            List<Action<List<object>>> actions;
+            if (_listenersWithParam.TryGetValue(key, out var listener))
+            {
+                actions = listener;
+            }
+            else
+            {
+                actions = new List<Action<List<object>>>();
+                _listenersWithParam.Add(key, actions);
+            }
+
+            actions.Add(action);
+        }
+        
+        public void NotifyObservers(string key, List<object> param)
+        {
+            if (_listenersWithParam.TryGetValue(key, out var listener))
+            {
+                foreach (Action<List<object>> a in listener)
+                {
+                    try
+                    {
+                        a?.Invoke(param);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError(e);
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogErrorFormat("listener {0} not exist", key);
+            }
         }
 
         public void NotifyObservers(string key)
@@ -43,6 +81,14 @@ namespace DATA.Scripts.Core
             else
             {
                 Debug.LogErrorFormat("listener {0} not exist", key);
+            }
+        }
+        
+        public void RemoveObserver(string key, Action<List<object>> action)
+        {
+            if (_listenersWithParam.TryGetValue(key, out var listener))
+            {
+                listener.Remove(action);
             }
         }
 
