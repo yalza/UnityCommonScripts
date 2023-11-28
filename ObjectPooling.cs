@@ -1,103 +1,35 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace DATA.Scripts.Core
 {
-    public class Observer : Singleton<Observer>
+    public class ObjectPooling : Singleton<ObjectPooling>
     {
-        private readonly Dictionary<string, List<Action>> _listeners = new Dictionary<string, List<Action>>();
-        private readonly Dictionary<string, List<Action<object>>> _listenersWithParam = new Dictionary<string, List<Action<object>>>();
-        public void RegisterObserver(string key, Action action)
+        readonly Dictionary<GameObject, List<GameObject>> _listObject = new Dictionary<GameObject, List<GameObject>>();
+        public GameObject GetGameObject(GameObject obj)
         {
-            List<Action> actions;
-            if (_listeners.TryGetValue(key, out var listener))
+            if (_listObject.ContainsKey(obj))
             {
-                actions = listener;
-            }
-            else
-            {
-                actions = new List<Action>();
-                _listeners.Add(key, actions);
-            }
-
-            actions.Add(action);
-        }
-      
-        public void RegisterObserver(string key, Action<object> action)
-        {
-            List<Action<object>> actions;
-            if (_listenersWithParam.TryGetValue(key, out var listener))
-            {
-                actions = listener;
-            }
-            else
-            {
-                actions = new List<Action<object>>();
-                _listenersWithParam.Add(key, actions);
-            }
-
-            actions.Add(action);
-        }
-        
-        public void NotifyObservers(string key, object param)
-        {
-            if (_listenersWithParam.TryGetValue(key, out var listener))
-            {
-                foreach (Action<object> a in listener)
+                foreach (GameObject go in _listObject[obj])
                 {
-                    try
-                    {
-                        a?.Invoke(param);
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogError(e);
-                    }
+                    if (go.activeSelf) continue;
+                    return go;
                 }
-            }
-            else
-            {
-                Debug.LogErrorFormat("listener {0} not exist", key);
-            }
-        }
+                GameObject g = Instantiate(obj, this.transform.position, Quaternion.identity);
+                _listObject[obj].Add(g);
+                g.SetActive(false);
 
-        public void NotifyObservers(string key)
-        {
-            if (_listeners.TryGetValue(key, value: out var listener))
-            {
-                foreach (Action a in listener)
-                {
-                    try
-                    {
-                        a?.Invoke();
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogError(e);
-                    }
-                }
+                return g;
             }
-            else
-            {
-                Debug.LogErrorFormat("listener {0} not exist", key);
-            }
-        }
-        
-        public void RemoveObserver(string key, Action<object> action)
-        {
-            if (_listenersWithParam.TryGetValue(key, out var listener))
-            {
-                listener.Remove(action);
-            }
-        }
 
-        public void RemoveObserver(string key, Action action)
-        {
-            if (_listeners.TryGetValue(key, out var listener))
-            {
-                listener.Remove(action);
-            }
+            List<GameObject> list = new List<GameObject>();
+            GameObject g2 = Instantiate(obj, this.transform.position, Quaternion.identity);
+            list.Add(g2);
+            g2.SetActive(false);
+            _listObject.Add(obj, list);
+
+            return g2;
+
         }
     }
 }
